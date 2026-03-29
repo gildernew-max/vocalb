@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>🇪🇸 Madrigal's Magic Spanish Flashcards</title>
+  <style>
+    :root {
+      --primary: #e63946;
+      --secondary: #f4a261;
+      --accent: #2a9d8f;
+      --bg: #f8f4ef;
+      --card-front: #ffffff;
+      --card-back: #264653;
+      --text-dark: #1d3557;
+      --text-light: #f1faee;
+      --shadow: 0 8px 32px rgba(0,0,0,0.15);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* ── Header ── */
+    header {
+      width: 100%;
+      background: linear-gradient(135deg, var(--primary) 0%, #c1121f 100%);
+      color: white;
+      text-align: center;
+      padding: 24px 16px 20px;
+      box-shadow: 0 4px 20px rgba(198,18,31,.35);
+    }
+    header h1 { font-size: clamp(1.4rem, 4vw, 2rem); letter-spacing: .5px; }
+    header p  { margin-top: 4px; opacity: .85; font-size: .95rem; }
+
+    /* ── Deck filter tabs ── */
+    #deck-bar {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;
+      padding: 18px 16px 10px;
+      width: 100%; max-width: 860px;
+    }
+    .deck-btn {
+      background: white; border: 2px solid #ddd; border-radius: 20px;
+      padding: 6px 16px; cursor: pointer; font-size: .85rem; transition: all .2s;
+      color: var(--text-dark);
+    }
+    .deck-btn:hover { border-color: var(--primary); color: var(--primary); }
+    .deck-btn.active {
+      background: var(--primary); color: white; border-color: var(--primary);
+    }
+
+    /* ── Stats bar ── */
+    #stats {
+      display: flex; gap: 24px; justify-content: center; flex-wrap: wrap;
+      padding: 8px 16px 16px;
+      font-size: .9rem; color: #555;
+    }
+    #stats span { display: flex; align-items: center; gap: 5px; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+    .dot-new    { background: #90a4ae; }
+    .dot-right  { background: var(--accent); }
+    .dot-wrong  { background: var(--primary); }
+
+    /* ── Card area ── */
+    #card-area {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 10px 16px 20px;
+      width: 100%; max-width: 600px;
+    }
+
+    .card-wrapper {
+      perspective: 1200px;
+      width: 100%; max-width: 500px;
+      height: 280px;
+      cursor: pointer;
+      margin-bottom: 24px;
+    }
+
+    .card {
+      width: 100%; height: 100%;
+      position: relative;
+      transform-style: preserve-3d;
+      transition: transform .55s cubic-bezier(.4,0,.2,1);
+      border-radius: 20px;
+    }
+    .card.flipped { transform: rotateY(180deg); }
+
+    .card-face {
+      position: absolute; inset: 0;
+      border-radius: 20px;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      backface-visibility: hidden;
+      padding: 28px 32px;
+      box-shadow: var(--shadow);
+      text-align: center;
+    }
+
+    .card-front {
+      background: var(--card-front);
+      color: var(--text-dark);
+    }
+    .card-front .lang-label {
+      position: absolute; top: 14px; left: 18px;
+      font-size: .72rem; font-weight: 700; letter-spacing: 1.5px;
+      color: var(--primary); text-transform: uppercase;
+    }
+    .card-front .hint {
+      position: absolute; bottom: 14px;
+      font-size: .75rem; color: #aaa;
+    }
+    .card-front .category-tag {
+      position: absolute; top: 14px; right: 18px;
+      font-size: .7rem; background: #f0f0f0; border-radius: 10px;
+      padding: 3px 10px; color: #888;
+    }
+    .card-front .spanish-word {
+      font-size: clamp(1.6rem, 6vw, 2.4rem);
+      font-weight: 700; line-height: 1.2;
+      color: var(--text-dark);
+    }
+
+    .card-back {
+      background: var(--card-back);
+      color: var(--text-light);
+      transform: rotateY(180deg);
+    }
+    .card-back .lang-label {
+      position: absolute; top: 14px; left: 18px;
+      font-size: .72rem; font-weight: 700; letter-spacing: 1.5px;
+      color: var(--secondary); text-transform: uppercase;
+    }
+    .card-back .english-word {
+      font-size: clamp(1.5rem, 5.5vw, 2.2rem);
+      font-weight: 700; line-height: 1.2;
+    }
+    .card-back .memory-tip {
+      margin-top: 12px; font-size: .85rem; opacity: .75; max-width: 340px;
+    }
+
+    /* ── Buttons ── */
+    #btn-row {
+      display: flex; gap: 12px; margin-top: 6px; flex-wrap: wrap; justify-content: center;
+    }
+    .btn {
+      padding: 12px 28px; border: none; border-radius: 50px;
+      font-size: 1rem; font-weight: 600; cursor: pointer;
+      transition: transform .15s, box-shadow .15s;
+      display: flex; align-items: center; gap: 7px;
+    }
+    .btn:hover  { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,.18); }
+    .btn:active { transform: translateY(0); }
+
+    .btn-wrong  { background: #fce4e4; color: var(--primary); }
+    .btn-right  { background: #d8f3ef; color: var(--accent); }
+    .btn-skip   { background: #e8eaf6; color: #5c6bc0; }
+    .btn-flip   {
+      background: linear-gradient(135deg,var(--primary),var(--secondary));
+      color: white; padding: 14px 40px; font-size: 1.05rem;
+    }
+
+    /* ── Progress bar ── */
+    #progress-wrap {
+      width: 100%; max-width: 500px; height: 8px; background: #e0e0e0;
+      border-radius: 4px; overflow: hidden; margin-bottom: 14px;
+    }
+    #progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), #52b788);
+      border-radius: 4px;
+      transition: width .4s ease;
+    }
+
+    /* ── Counter ── */
+    #counter {
+      font-size: .9rem; color: #777; margin-bottom: 10px;
+    }
+
+    /* ── Celebration overlay ── */
+    #celebrate {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,.55); z-index: 100;
+      flex-direction: column; align-items: center; justify-content: center;
+      color: white; text-align: center; padding: 24px;
+    }
+    #celebrate.show { display: flex; }
+    #celebrate h2 { font-size: 2.5rem; margin-bottom: 12px; }
+    #celebrate p  { font-size: 1.1rem; opacity: .85; margin-bottom: 28px; }
+    #celebrate .score-box {
+      background: rgba(255,255,255,.15); border-radius: 16px;
+      padding: 20px 40px; margin-bottom: 28px;
+      font-size: 1.3rem;
+    }
+    #celebrate .score-box span { font-size: 3rem; font-weight: 800; display: block; }
+    .btn-restart {
+      background: white; color: var(--primary);
+      padding: 14px 40px; border-radius: 50px;
+      border: none; font-size: 1.1rem; font-weight: 700;
+      cursor: pointer; transition: transform .15s;
+    }
+    .btn-restart:hover { transform: scale(1.04); }
+
+    /* ── Confetti canvas ── */
+    #confetti-canvas {
+      position: fixed; inset: 0; pointer-events: none; z-index: 99;
+    }
+
+    /* ── Keyboard hint ── */
+    #keyboard-hint {
+      margin-top: 14px; font-size: .78rem; color: #aaa; text-align: center;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 480px) {
+      .card-wrapper { height: 240px; }
+      .btn { padding: 10px 20px; font-size: .9rem; }
+      .btn-flip { padding: 12px 30px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🇪🇸 Madrigal's Magic Spanish Flashcards</h1>
+  <p>Based on <em>Madrigal's Magic Key to Spanish</em> by Margarita Madrigal</p>
+</header>
+
+<!-- Deck selector -->
+<div id="deck-bar">
+  <button class="deck-btn active" data-deck="all">🃏 All Cards</button>
+  <button class="deck-btn" data-deck="nouns">🏷 Nouns</button>
+  <button class="deck-btn" data-deck="verbs">⚡ Verbs</button>
+  <button class="deck-btn" data-deck="adjectives">🌈 Adjectives</button>
+  <button class="deck-btn" data-deck="phrases">💬 Phrases</button>
+  <button class="deck-btn" data-deck="rules">✨ Magic Rules</button>
+</div>
+
+<!-- Stats -->
+<div id="stats">
+  <span><span class="dot dot-new"></span> <span id="stat-new">0</span> new</span>
+  <span><span class="dot dot-right"></span> <span id="stat-right">0</span> correct</span>
+  <span><span class="dot dot-wrong"></span> <span id="stat-wrong">0</span> missed</span>
+</div>
+
+<!-- Card area -->
+<div id="card-area">
+  <div id="progress-wrap"><div id="progress-bar" style="width:0%"></div></div>
+  <div id="counter">Card 1 of 0</div>
+
+  <div class="card-wrapper" id="card-wrapper" onclick="flipCard()">
+    <div class="card" id="card">
+      <div class="card-face card-front">
+        <span class="lang-label">🇪🇸 Spanish</span>
+        <span class="category-tag" id="category-tag">noun</span>
+        <div class="spanish-word" id="spanish-word">Loading…</div>
+        <span class="hint">tap to reveal</span>
+      </div>
+      <div class="card-face card-back">
+        <span class="lang-label">🇺🇸 English</span>
+        <div class="english-word" id="english-word"></div>
+        <div class="memory-tip" id="memory-tip"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="btn-row">
+    <button class="btn btn-flip" onclick="flipCard()">👀 Reveal</button>
+  </div>
+  <div id="keyboard-hint">Space / ← → arrow keys • R = correct • W = missed</div>
+</div>
+
+<!-- Celebration overlay -->
+<div id="celebrate">
+  <canvas id="confetti-canvas"></canvas>
+  <h2>🎉 ¡Excelente!</h2>
+  <p>You've finished this deck!</p>
+  <div class="score-box">
+    <span id="final-score">0%</span>
+    Final Score
+  </div>
+  <button class="btn-restart" onclick="restart()">🔄 Play Again</button>
+</div>
+
+<script>
+// ─────────────────────────────────────────
+// FLASHCARD DATA  (from Madrigal's Magic Key to Spanish)
+// ─────────────────────────────────────────
+const ALL_CARDS = [
+  // ── MAGIC RULES (the book's big insight) ──
+  { deck:"rules", spanish:'Words ending in "-or"', english:'Same in Spanish!\nel actor, el doctor, el color', tip:'English "actor" → Spanish "el actor" — no change needed!' },
+  { deck:"rules", spanish:'Words ending in "-al"', english:'Same in Spanish!\nel animal, el canal, el criminal', tip:'Stress falls on the LAST syllable: lo-CAL' },
+  { deck:"rules", spanish:'Words ending in "-ble"', english:'Same in Spanish!\nel cable, notable, flexible', tip:'Stress on the SECOND-to-last syllable: no-TA-ble' },
+  { deck:"rules", spanish:'Words ending in "-ic"', english:'Add "o" in Spanish\nel público, enigmático, el Atlántico', tip:'"Public" → "el público" — just add an "o"!' },
+  { deck:"rules", spanish:'Words ending in "-ent" or "-ant"', english:'Add "e" in Spanish\nel presidente, importante', tip:'"President" → "el presidente" — add an "e"!' },
+  { deck:"rules", spanish:'Words ending in "-ist"', english:'Becomes "-ista" in Spanish\nel pianista, el dentista, el artista', tip:'"Pianist" → "el pianista" — works for both genders!' },
+  { deck:"rules", spanish:'Words ending in "-ous"', english:'Becomes "-oso" in Spanish\nfamoso, delicioso, generoso', tip:'"Famous" → "famoso" — drop -ous, add -oso' },
+  { deck:"rules", spanish:'Words ending in "-tion"', english:'Becomes "-ción" in Spanish\nla acción, la descripción, la invitación', tip:'"Action" → "la acción" — change t to c and add accent!' },
+  { deck:"rules", spanish:'Words ending in "-ry"', english:'Becomes "-rio" in Spanish\nel canario, el diccionario, el aniversario', tip:'"Dictionary" → "el diccionario" — replace -ry with -rio' },
+  { deck:"rules", spanish:'Words ending in "-ry" (2)', english:'"Necessary", "literary", "contrary"\nnecesario, literario, contrario', tip:'Most -ary English words → -ario in Spanish!' },
+  { deck:"rules", spanish:'Words ending in "-cy"', english:'Becomes "-cia" in Spanish\nla democracia, la agencia, la urgencia', tip:'"Democracy" → "la democracia"' },
+  { deck:"rules", spanish:'Words ending in "-ine"', english:'Becomes "-ina" in Spanish\nla sardina, la gasolina, la quinina', tip:'"Gasoline" → "la gasolina"' },
+  { deck:"rules", spanish:'Words ending in "-ity"', english:'Becomes "-idad" in Spanish\nla actividad, la debilidad, la hospitalidad', tip:'"Activity" → "la actividad" — drop -ity, add -idad' },
+
+  // ── NOUNS ──
+  { deck:"nouns", spanish:'el actor', english:'the actor', tip:'Words ending in -or are the same in English & Spanish!' },
+  { deck:"nouns", spanish:'el doctor', english:'the doctor', tip:'"el" = the (masculine)' },
+  { deck:"nouns", spanish:'el animal', english:'the animal', tip:'Words ending in -al are the same in both languages.' },
+  { deck:"nouns", spanish:'el canal', english:'the canal', tip:'Panama Canal = el Canal de Panamá' },
+  { deck:"nouns", spanish:'el cable', english:'the cable', tip:'Words ending in -ble are usually identical!' },
+  { deck:"nouns", spanish:'el pianista', english:'the pianist', tip:'-ist in English → -ista in Spanish (works for any gender)' },
+  { deck:"nouns", spanish:'el dentista', english:'the dentist', tip:'"la dentista" for a female dentist' },
+  { deck:"nouns", spanish:'el artista', english:'the artist', tip:'Same ending: -ista' },
+  { deck:"nouns", spanish:'la acción', english:'the action', tip:'-tion → -ción — note the accent mark!' },
+  { deck:"nouns", spanish:'la descripción', english:'the description', tip:'-tion → -ción' },
+  { deck:"nouns", spanish:'la invitación', english:'the invitation', tip:'-tion → -ción' },
+  { deck:"nouns", spanish:'la conversación', english:'the conversation', tip:'-tion → -ción' },
+  { deck:"nouns", spanish:'el programa', english:'the program', tip:'Ends in -a but is MASCULINE — el programa!' },
+  { deck:"nouns", spanish:'el poema', english:'the poem', tip:'Also masculine despite ending in -a' },
+  { deck:"nouns", spanish:'el problema', english:'the problem', tip:'Masculine: el problema, los problemas' },
+  { deck:"nouns", spanish:'el sistema', english:'the system', tip:'Masculine: el sistema' },
+  { deck:"nouns", spanish:'la actividad', english:'the activity', tip:'-ity → -idad' },
+  { deck:"nouns", spanish:'la debilidad', english:'the weakness', tip:'"Debility" → la debilidad' },
+  { deck:"nouns", spanish:'la hospitalidad', english:'the hospitality', tip:'-ity → -idad' },
+  { deck:"nouns", spanish:'la democracia', english:'the democracy', tip:'-cy → -cia' },
+  { deck:"nouns", spanish:'la agencia', english:'the agency', tip:'-cy → -cia' },
+  { deck:"nouns", spanish:'la sardina', english:'the sardine', tip:'-ine → -ina' },
+  { deck:"nouns", spanish:'la gasolina', english:'the gasoline', tip:'-ine → -ina' },
+  { deck:"nouns", spanish:'la ambulancia', english:'the ambulance', tip:'-ance → -ancia' },
+  { deck:"nouns", spanish:'la experiencia', english:'the experience', tip:'-ence → -encia' },
+  { deck:"nouns", spanish:'el presidente', english:'the president', tip:'-ent → -ente (add an e)' },
+  { deck:"nouns", spanish:'el aniversario', english:'the anniversary', tip:'-ary → -ario' },
+  { deck:"nouns", spanish:'el diccionario', english:'the dictionary', tip:'-ary → -ario' },
+  { deck:"nouns", spanish:'el canario', english:'the canary', tip:'-ary → -ario' },
+  { deck:"nouns", spanish:'el periodista', english:'the journalist', tip:'-ist → -ista' },
+  { deck:"nouns", spanish:'la revista', english:'the magazine', tip:'Related to "revisar" (to review)' },
+  { deck:"nouns", spanish:'el periódico', english:'the newspaper', tip:'From "período" (period)' },
+  { deck:"nouns", spanish:'el artículo', english:'the article', tip:'-ic + o → el artículo' },
+  { deck:"nouns", spanish:'el libro', english:'the book', tip:'Una librería is a bookstore!' },
+  { deck:"nouns", spanish:'la flor', english:'the flower', tip:'Las flores son bonitas.' },
+  { deck:"nouns", spanish:'la fiesta', english:'the party / festival', tip:'La fiesta = the party 🎉' },
+  { deck:"nouns", spanish:'el cine', english:'the movies / cinema', tip:'Voy al cine = I\'m going to the movies' },
+  { deck:"nouns", spanish:'el tren', english:'the train', tip:'El tren sale a las ocho.' },
+  { deck:"nouns", spanish:'el avión', english:'the airplane', tip:'Voy en avión = I\'m going by plane' },
+  { deck:"nouns", spanish:'el aeropuerto', english:'the airport', tip:'"Aero" (air) + "puerto" (port)' },
+  { deck:"nouns", spanish:'la estación', english:'the station', tip:'La estación del tren = the train station' },
+  { deck:"nouns", spanish:'el taxi', english:'the taxi', tip:'Same word!' },
+  { deck:"nouns", spanish:'el automóvil', english:'the automobile', tip:'Same root as English!' },
+  { deck:"nouns", spanish:'la bicicleta', english:'the bicycle', tip:'Also just "la bici" informally' },
+  { deck:"nouns", spanish:'un amigo', english:'a friend (male)', tip:'"una amiga" for a female friend' },
+  { deck:"nouns", spanish:'la farmacia', english:'the drugstore / pharmacy', tip:'-acy → -acia' },
+  { deck:"nouns", spanish:'el concierto', english:'the concert', tip:'¡Voy a un concierto esta noche!' },
+  { deck:"nouns", spanish:'la canción', english:'the song', tip:'-tion → -ción' },
+  { deck:"nouns", spanish:'la luna', english:'the moon', tip:'"Lunar" comes from "luna"!' },
+  { deck:"nouns", spanish:'el buzón', english:'the mailbox', tip:'From "buzo" (diver) — originally a leather bag!' },
+  { deck:"nouns", spanish:'la pluma', english:'the pen', tip:'Literally "feather" — quill pen!' },
+  { deck:"nouns", spanish:'el papel', english:'the paper', tip:'El papel es importante.' },
+  { deck:"nouns", spanish:'el calendario', english:'the calendar', tip:'From Latin "calendarium"' },
+  { deck:"nouns", spanish:'el diccionario', english:'the dictionary', tip:'-ary → -ario' },
+  { deck:"nouns", spanish:'la secretaria', english:'the secretary', tip:'Secretary (f.) = la secretaria' },
+  { deck:"nouns", spanish:'la palabra', english:'the word', tip:'Las palabras son poderosas.' },
+  { deck:"nouns", spanish:'la carta', english:'the letter (mail)', tip:'Also means "menu" in some countries!' },
+  { deck:"nouns", spanish:'la lechuga', english:'the lettuce', tip:'¿Quieres lechuga en tu ensalada?' },
+  { deck:"nouns", spanish:'el postre', english:'the dessert', tip:'¿Qué hay de postre?' },
+  { deck:"nouns", spanish:'una ensalada', english:'a salad', tip:'una ensalada fresca = a fresh salad' },
+  { deck:"nouns", spanish:'el precio', english:'the price', tip:'¿Cuál es el precio?' },
+  { deck:"nouns", spanish:'un boleto', english:'a ticket', tip:'Compré un boleto de tren.' },
+  { deck:"nouns", spanish:'la economía', english:'the economy', tip:'-y → -ía (with accent)' },
+  { deck:"nouns", spanish:'la biografía', english:'the biography', tip:'-y → -ía' },
+  { deck:"nouns", spanish:'el mes', english:'the month', tip:'El mes de enero = the month of January' },
+  { deck:"nouns", spanish:'las noticias', english:'the news', tip:'Always plural in Spanish: las noticias' },
+  { deck:"nouns", spanish:'el desayuno', english:'the breakfast', tip:'From "des-ayunar" (to stop fasting)' },
+  { deck:"nouns", spanish:'el almuerzo', english:'the lunch', tip:'El almuerzo es a las dos.' },
+  { deck:"nouns", spanish:'la carne', english:'the meat', tip:'La carne está deliciosa.' },
+  { deck:"nouns", spanish:'una novela', english:'a novel', tip:'Una novela interesante = an interesting novel' },
+  { deck:"nouns", spanish:'la casa', english:'the house', tip:'Mi casa es tu casa! 🏠' },
+  { deck:"nouns", spanish:'el vals', english:'the waltz', tip:'Bailamos el vals.' },
+  { deck:"nouns", spanish:'el gato / la gata', english:'the cat', tip:'"gatito/a" = little kitten (add -ito/-ita for affection)' },
+  { deck:"nouns", spanish:'una blusa', english:'a blouse', tip:'Una blusa bonita = a pretty blouse' },
+  { deck:"nouns", spanish:'un suéter', english:'a sweater', tip:'Note the accent: suéter' },
+  { deck:"nouns", spanish:'el vestido', english:'the dress', tip:'Un vestido elegante = an elegant dress' },
+
+  // ── VERBS ──
+  { deck:"verbs", spanish:'visitar', english:'to visit', tip:'Infinitives ending in -ar: drop -ar, add -é for "I" (past): visité' },
+  { deck:"verbs", spanish:'preparar', english:'to prepare', tip:'preparé = I prepared' },
+  { deck:"verbs", spanish:'celebrar', english:'to celebrate', tip:'celebré = I celebrated' },
+  { deck:"verbs", spanish:'invitar', english:'to invite', tip:'invité = I invited' },
+  { deck:"verbs", spanish:'bailar', english:'to dance', tip:'bailé = I danced 💃' },
+  { deck:"verbs", spanish:'caminar', english:'to walk', tip:'caminé = I walked' },
+  { deck:"verbs", spanish:'trabajar', english:'to work', tip:'trabajé = I worked' },
+  { deck:"verbs", spanish:'estudiar', english:'to study', tip:'estudié = I studied' },
+  { deck:"verbs", spanish:'tomar', english:'to take / to drink', tip:'Tomé un café = I drank a coffee' },
+  { deck:"verbs", spanish:'hablar', english:'to speak', tip:'hablo = I speak; habla = you/he/she speaks' },
+  { deck:"verbs", spanish:'comprar', english:'to buy', tip:'compro = I buy; compré = I bought' },
+  { deck:"verbs", spanish:'vender', english:'to sell', tip:'vendo = I sell; vendí = I sold' },
+  { deck:"verbs", spanish:'pagar', english:'to pay', tip:'pagué = I paid (note: -gar → -gué in past)' },
+  { deck:"verbs", spanish:'llegar', english:'to arrive', tip:'llegué = I arrived (-gar → -gué)' },
+  { deck:"verbs", spanish:'jugar', english:'to play (a game)', tip:'jugué = I played (-gar → -gué)' },
+  { deck:"verbs", spanish:'ganar', english:'to win / to earn', tip:'¡Ganamos! = We won!' },
+  { deck:"verbs", spanish:'cantar', english:'to sing', tip:'canto = I sing; cantó = he/she sang 🎶' },
+  { deck:"verbs", spanish:'leer', english:'to read', tip:'leo = I read; leí = I read (past)' },
+  { deck:"verbs", spanish:'ver', english:'to see', tip:'veo = I see; ví = I saw' },
+  { deck:"verbs", spanish:'comer', english:'to eat', tip:'como = I eat; comió = he/she ate' },
+  { deck:"verbs", spanish:'vivir', english:'to live', tip:'vivo = I live; vive = you/he/she lives' },
+  { deck:"verbs", spanish:'recibir', english:'to receive', tip:'recibo = I receive; recibí = I received' },
+  { deck:"verbs", spanish:'escribir', english:'to write', tip:'escribo = I write; escribí = I wrote' },
+  { deck:"verbs", spanish:'comprender', english:'to understand', tip:'comprendo = I understand' },
+  { deck:"verbs", spanish:'aprender', english:'to learn', tip:'aprendo = I learn' },
+  { deck:"verbs", spanish:'pedir', english:'to ask for / order', tip:'pido = I ask for' },
+  { deck:"verbs", spanish:'repetir', english:'to repeat', tip:'repito = I repeat' },
+  { deck:"verbs", spanish:'correr', english:'to run', tip:'corro = I run' },
+  { deck:"verbs", spanish:'dar', english:'to give', tip:'doy = I give; di = I gave' },
+  { deck:"verbs", spanish:'traer', english:'to bring', tip:'traigo = I bring; traje = I brought' },
+  { deck:"verbs", spanish:'decir', english:'to say / to tell', tip:'digo = I say; dije = I said' },
+  { deck:"verbs", spanish:'hacer', english:'to do / to make', tip:'hago = I do; hice = I did' },
+  { deck:"verbs", spanish:'poner', english:'to put', tip:'pongo = I put; puse = I put (past)' },
+  { deck:"verbs", spanish:'volver', english:'to return', tip:'vuelvo = I return (stem-changing: o→ue)' },
+  { deck:"verbs", spanish:'ir', english:'to go', tip:'voy = I go; fui = I went' },
+  { deck:"verbs", spanish:'ser', english:'to be (permanent)', tip:'soy, eres, es — for permanent qualities' },
+  { deck:"verbs", spanish:'estar', english:'to be (temporary)', tip:'estoy, estás, está — for conditions & location' },
+  { deck:"verbs", spanish:'tener', english:'to have', tip:'tengo = I have; tuve = I had' },
+  { deck:"verbs", spanish:'conocer', english:'to know (a person)', tip:'conozco = I know (note the -zco ending!)' },
+  { deck:"verbs", spanish:'oír', english:'to hear', tip:'oigo = I hear' },
+  { deck:"verbs", spanish:'regresar', english:'to return / go back', tip:'regresé = I returned' },
+  { deck:"verbs", spanish:'esperar', english:'to wait / to hope', tip:'espero = I wait/hope' },
+  { deck:"verbs", spanish:'felicitar', english:'to congratulate', tip:'¡Te felicito! = Congratulations!' },
+  { deck:"verbs", spanish:'aplaudir', english:'to applaud', tip:'aplaudí = I applauded 👏' },
+  { deck:"verbs", spanish:'construir', english:'to build', tip:'construyo = I build' },
+  { deck:"verbs", spanish:'establecer', english:'to establish', tip:'establezco = I establish (-cer → -zco)' },
+  { deck:"verbs", spanish:'gustar', english:'to like (lit: to please)', tip:'Me gusta = I like it (lit: it pleases me)' },
+  { deck:"verbs", spanish:'bañarse', english:'to bathe oneself', tip:'Reflexive verb: me baño = I bathe (myself)' },
+  { deck:"verbs", spanish:'levantarse', english:'to get up', tip:'Me levanté a las siete = I got up at seven' },
+  { deck:"verbs", spanish:'casarse', english:'to get married', tip:'Se casaron en junio = They got married in June' },
+
+  // ── ADJECTIVES ──
+  { deck:"adjectives", spanish:'famoso / famosa', english:'famous', tip:'-ous → -oso / -osa. El actor famoso.' },
+  { deck:"adjectives", spanish:'delicioso / deliciosa', english:'delicious', tip:'¡La comida está deliciosa!' },
+  { deck:"adjectives", spanish:'generoso / generosa', english:'generous', tip:'-ous → -oso' },
+  { deck:"adjectives", spanish:'interesante', english:'interesting', tip:'-ant → -ante. Same for masc. & fem.!' },
+  { deck:"adjectives", spanish:'paciente', english:'patient (calm)', tip:'Also: imPACIENTE = impatient' },
+  { deck:"adjectives", spanish:'importante', english:'important', tip:'-ant → -ante' },
+  { deck:"adjectives", spanish:'caro / cara', english:'expensive', tip:'¡Qué caro! = How expensive!' },
+  { deck:"adjectives", spanish:'barato / barata', english:'cheap / inexpensive', tip:'Opposite of caro' },
+  { deck:"adjectives", spanish:'grande', english:'big / large / great', tip:'"Gran" before a noun: un gran hombre' },
+  { deck:"adjectives", spanish:'pequeño / pequeña', english:'small / little', tip:'Diminutive: pequeñito = very small' },
+  { deck:"adjectives", spanish:'bueno / buena', english:'good', tip:'"Buen" before masc. noun: un buen libro' },
+  { deck:"adjectives", spanish:'malo / mala', english:'bad', tip:'"Mal" before masc. noun: un mal día' },
+  { deck:"adjectives", spanish:'rápido / rápida', english:'fast / quick', tip:'Quickly = rápidamente' },
+  { deck:"adjectives", spanish:'completamente', english:'completely', tip:'Adverbs end in -mente (like English -ly)' },
+  { deck:"adjectives", spanish:'rápidamente', english:'rapidly / quickly', tip:'"Rápida" + -mente = rápidamente' },
+  { deck:"adjectives", spanish:'azul', english:'blue', tip:'El cielo azul = the blue sky ☀️' },
+  { deck:"adjectives", spanish:'blanco / blanca', english:'white', tip:'La Casa Blanca = The White House' },
+  { deck:"adjectives", spanish:'bonito / bonita', english:'pretty / nice', tip:'¡Qué bonita flor! = What a pretty flower!' },
+  { deck:"adjectives", spanish:'educado / educada', english:'educated / well-mannered', tip:'Un hombre educado = a well-mannered man' },
+  { deck:"adjectives", spanish:'famosas', english:'famous (fem. plural)', tip:'Las playas famosas = the famous beaches' },
+  { deck:"adjectives", spanish:'extraordinario', english:'extraordinary', tip:'-ary → -ario' },
+  { deck:"adjectives", spanish:'imaginario', english:'imaginary', tip:'-ary → -ario' },
+  { deck:"adjectives", spanish:'necesario', english:'necessary', tip:'-ary → -ario' },
+  { deck:"adjectives", spanish:'involuntario', english:'involuntary', tip:'-ary → -ario' },
+  { deck:"adjectives", spanish:'eccéntrico', english:'eccentric', tip:'-ic → -ico' },
+  { deck:"adjectives", spanish:'enigmático', english:'enigmatic', tip:'-ic → -ico' },
+  { deck:"adjectives", spanish:'público', english:'public', tip:'-ic → add "o" = el público' },
+
+  // ── PHRASES & EXPRESSIONS ──
+  { deck:"phrases", spanish:'Con mucho gusto', english:'With pleasure / Gladly', tip:'A very polite way to say "you\'re welcome" or agree to something.' },
+  { deck:"phrases", spanish:'¿Cómo está usted?', english:'How are you? (formal)', tip:'"Usted" is formal. "¿Cómo estás?" is informal.' },
+  { deck:"phrases", spanish:'Estoy bien, gracias', english:'I\'m fine, thank you', tip:'Estar = temporary state → use for how you feel' },
+  { deck:"phrases", spanish:'Voy a…', english:'I\'m going to…', tip:'Voy a estudiar = I\'m going to study. Future with ir + a + infinitive!' },
+  { deck:"phrases", spanish:'¿Va a…?', english:'Are you going to…?', tip:'¿Va a San Francisco? = Are you going to SF?' },
+  { deck:"phrases", spanish:'Me gusta la música', english:'I like music (lit: music pleases me)', tip:'Singular: me GUSTA. Plural: me GUSTAN las rosas.' },
+  { deck:"phrases", spanish:'Me gustan las rosas', english:'I like roses', tip:'GUSTAN for plural subjects' },
+  { deck:"phrases", spanish:'Estoy estudiando', english:'I am studying', tip:'Present progressive: estar + -ando/-iendo' },
+  { deck:"phrases", spanish:'esta mañana', english:'this morning', tip:'esta tarde = this afternoon; esta noche = tonight' },
+  { deck:"phrases", spanish:'anoche', english:'last night', tip:'La semana pasada = last week' },
+  { deck:"phrases", spanish:'mañana', english:'tomorrow', tip:'Also means "morning" — context tells you which!' },
+  { deck:"phrases", spanish:'por qué', english:'why', tip:'porque (one word) = because' },
+  { deck:"phrases", spanish:'también', english:'also / too', tip:'Yo también = Me too!' },
+  { deck:"phrases", spanish:'naturalmente', english:'naturally / of course', tip:'-ly → -mente in Spanish' },
+  { deck:"phrases", spanish:'eso es ridículo', english:'that is ridiculous', tip:'eso = that (neutral/general)' },
+  { deck:"phrases", spanish:'La semana pasada', english:'last week', tip:'"Pasada" = past/gone' },
+  { deck:"phrases", spanish:'Debo estudiar', english:'I ought to study', tip:'Deber + infinitive = ought to / should' },
+  { deck:"phrases", spanish:'Tengo frío', english:'I\'m cold (lit: I have cold)', tip:'Spanish uses TENER (have) for feelings: tengo hambre = I\'m hungry' },
+  { deck:"phrases", spanish:'Vamos al cine', english:'We\'re going to the movies', tip:'Vamos = we go / let\'s go' },
+  { deck:"phrases", spanish:'¡Qué caro!', english:'How expensive!', tip:'Qué + adj. = What a / How! — ¡Qué bonito!' },
+  { deck:"phrases", spanish:'Estoy en casa', english:'I am at home', tip:'Estar (not ser) for location' },
+  { deck:"phrases", spanish:'Espero que…', english:'I hope that…', tip:'Triggers subjunctive: Espero que lea el libro.' },
+  { deck:"phrases", spanish:'Dudo que…', english:'I doubt that…', tip:'Doubt triggers subjunctive mood' },
+  { deck:"phrases", spanish:'Levántese', english:'Sit — Get up! (command)', tip:'Command form (usted): add -se for reflexive' },
+  { deck:"phrases", spanish:'Siéntese', english:'Sit down! (command)', tip:'From "sentarse" = to sit down' },
+  { deck:"phrases", spanish:'Hable despacio', english:'Speak slowly! (command)', tip:'Useful when you don\'t understand! 😅' },
+  { deck:"phrases", spanish:'Dígame', english:'Tell me / Hello? (on phone)', tip:'Literally "tell me" — used when answering the phone in Spain' },
+  { deck:"phrases", spanish:'No me diga', english:'You don\'t say! / No kidding!', tip:'Literally "don\'t tell me" — an expression of surprise' },
+  { deck:"phrases", spanish:'había terminado', english:'I had finished', tip:'Past perfect: había/habías/había + past participle' },
+  { deck:"phrases", spanish:'Quiero que vengas', english:'I want you to come', tip:'Querer que + subjunctive — when subjects are different' },
+  { deck:"phrases", spanish:'hacer caso', english:'to pay attention', tip:'hacer daño = to cause harm; hacer falta = to miss' },
+  { deck:"phrases", spanish:'Me levanté a las siete', english:'I got up at seven', tip:'Reflexive past: levanté → me levanté' },
+  { deck:"phrases", spanish:'Llueve', english:'It\'s raining', tip:'Llovió = it rained. Weather verbs only need 3rd person!' },
+  { deck:"phrases", spanish:'por teléfono', english:'on the phone', tip:'por = by means of. por avión = by plane' },
+  { deck:"phrases", spanish:'en avión', english:'by plane', tip:'en tren = by train; en taxi = by taxi' },
+];
+
+// ─────────────────────────────────────────
+// APP STATE
+// ─────────────────────────────────────────
+let deck = 'all';
+let queue = [];
+let currentIndex = 0;
+let isFlipped = false;
+let stats = { right: 0, wrong: 0 };
+let cardStates = {}; // id -> 'right'|'wrong'|'new'
+
+function getFilteredDeck() {
+  if (deck === 'all') return [...ALL_CARDS];
+  return ALL_CARDS.filter(c => c.deck === deck);
+}
+
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function init() {
+  queue = shuffle(getFilteredDeck()).map((c, i) => ({ ...c, id: i }));
+  currentIndex = 0;
+  isFlipped = false;
+  stats = { right: 0, wrong: 0 };
+  cardStates = {};
+  updateStats();
+  showCard();
+}
+
+function showCard() {
+  const card = document.getElementById('card');
+  card.classList.remove('flipped');
+  isFlipped = false;
+
+  if (currentIndex >= queue.length) {
+    showCelebration();
+    return;
+  }
+
+  const item = queue[currentIndex];
+  document.getElementById('spanish-word').textContent = item.spanish;
+  document.getElementById('english-word').textContent = item.english;
+  document.getElementById('memory-tip').textContent = item.tip ? '💡 ' + item.tip : '';
+  document.getElementById('category-tag').textContent = item.deck;
+
+  const total = queue.length;
+  const pct = (currentIndex / total) * 100;
+  document.getElementById('progress-bar').style.width = pct + '%';
+  document.getElementById('counter').textContent = `Card ${currentIndex + 1} of ${total}`;
+
+  // Show flip button only before reveal
+  setButtons(false);
+}
+
+function setButtons(revealed) {
+  const row = document.getElementById('btn-row');
+  if (revealed) {
+    row.innerHTML = `
+      <button class="btn btn-wrong" onclick="markCard(false)">✗ Missed</button>
+      <button class="btn btn-skip"  onclick="skipCard()">→ Skip</button>
+      <button class="btn btn-right" onclick="markCard(true)">✓ Got it!</button>
+    `;
+  } else {
+    row.innerHTML = `<button class="btn btn-flip" onclick="flipCard()">👀 Reveal Answer</button>`;
+  }
+}
+
+function flipCard() {
+  const card = document.getElementById('card');
+  isFlipped = !isFlipped;
+  card.classList.toggle('flipped', isFlipped);
+  if (isFlipped) setButtons(true);
+  else setButtons(false);
+}
+
+function markCard(correct) {
+  if (correct) {
+    stats.right++;
+    cardStates[currentIndex] = 'right';
+  } else {
+    stats.wrong++;
+    cardStates[currentIndex] = 'wrong';
+    // Put missed card back later
+    const missed = { ...queue[currentIndex] };
+    const insertAt = Math.min(currentIndex + 3, queue.length);
+    queue.splice(insertAt, 0, missed);
+  }
+  updateStats();
+  currentIndex++;
+  showCard();
+}
+
+function skipCard() {
+  currentIndex++;
+  showCard();
+}
+
+function updateStats() {
+  const total = queue.length;
+  const answered = stats.right + stats.wrong;
+  const newCount = total - answered;
+  document.getElementById('stat-new').textContent   = Math.max(0, newCount);
+  document.getElementById('stat-right').textContent = stats.right;
+  document.getElementById('stat-wrong').textContent = stats.wrong;
+}
+
+function showCelebration() {
+  const answered = stats.right + stats.wrong;
+  const pct = answered > 0 ? Math.round((stats.right / answered) * 100) : 0;
+  document.getElementById('final-score').textContent = pct + '%';
+  document.getElementById('celebrate').classList.add('show');
+  launchConfetti();
+}
+
+function restart() {
+  document.getElementById('celebrate').classList.remove('show');
+  stopConfetti();
+  init();
+}
+
+// ── Deck buttons ──
+document.querySelectorAll('.deck-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.deck-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    deck = btn.dataset.deck;
+    init();
+  });
+});
+
+// ── Keyboard controls ──
+document.addEventListener('keydown', e => {
+  if (document.getElementById('celebrate').classList.contains('show')) {
+    if (e.key === 'Enter') restart();
+    return;
+  }
+  if (e.key === ' ' || e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+    e.preventDefault(); flipCard();
+  } else if (e.key === 'ArrowRight' && isFlipped) markCard(true);
+  else if (e.key === 'ArrowLeft'  && isFlipped) markCard(false);
+  else if ((e.key === 'r' || e.key === 'R') && isFlipped) markCard(true);
+  else if ((e.key === 'w' || e.key === 'W') && isFlipped) markCard(false);
+});
+
+// ─────────────────────────────────────────
+// CONFETTI  (lightweight vanilla JS)
+// ─────────────────────────────────────────
+let confettiAnim = null;
+const COLORS = ['#e63946','#f4a261','#2a9d8f','#e9c46a','#264653','#a8dadc'];
+
+function launchConfetti() {
+  const canvas = document.getElementById('confetti-canvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width  = window.innerWidth;
+  canvas.height = window.innerHeight;
+
+  const pieces = Array.from({ length: 120 }, () => ({
+    x: Math.random() * canvas.width,
+    y: Math.random() * -canvas.height,
+    w: 8 + Math.random() * 10,
+    h: 4 + Math.random() * 6,
+    color: COLORS[Math.floor(Math.random() * COLORS.length)],
+    speed: 2 + Math.random() * 4,
+    angle: Math.random() * Math.PI * 2,
+    spin:  (Math.random() - .5) * .2,
+  }));
+
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    pieces.forEach(p => {
+      ctx.save();
+      ctx.translate(p.x + p.w / 2, p.y + p.h / 2);
+      ctx.rotate(p.angle);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+      ctx.restore();
+      p.y += p.speed;
+      p.angle += p.spin;
+      if (p.y > canvas.height) {
+        p.y = -20;
+        p.x = Math.random() * canvas.width;
+      }
+    });
+    confettiAnim = requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+function stopConfetti() {
+  if (confettiAnim) {
+    cancelAnimationFrame(confettiAnim);
+    confettiAnim = null;
+    const canvas = document.getElementById('confetti-canvas');
+    canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+  }
+}
+
+// ── Start! ──
+init();
+</script>
+</body>
+</html>
